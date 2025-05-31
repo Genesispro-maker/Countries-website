@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Where in the world?</title>
+  <link rel="stylesheet" href="styles.css" />
+
+
+
+  <style>
+    /* styles.css */
+
+body {
+  margin: 0;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background-color: var(--bg);
+  color: var(--text);
+  transition: background 0.3s, color 0.3s;
+}
+
+:root {
+  --bg: hsl(0, 0%, 98%);
+  --text: hsl(200, 15%, 8%);
+  --element: hsl(0, 0%, 100%);
+}
+
+body.dark {
+  --bg: hsl(207, 26%, 17%);
+  --text: hsl(0, 0%, 100%);
+  --element: hsl(209, 23%, 22%);
+}
+
+header {
+  background-color: var(--element);
+  padding: 1rem 2rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.controls {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  padding: 2rem;
+}
+
+#search {
+  padding: 0.5rem;
+  width: 300px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+}
+
+#region-filter {
+  padding: 0.5rem;
+  border-radius: 5px;
+}
+
+.country-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 2rem;
+  padding: 2rem;
+}
+
+.country-card {
+  background-color: var(--element);
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.country-card:hover {
+  transform: translateY(-5px);
+}
+
+.country-card img {
+  width: 100%;
+  height: 160px;
+  object-fit: cover;
+}
+
+.country-card .card-body {
+  padding: 1rem;
+}
+
+.hidden {
+  display: none;
+}
+
+#detail-view {
+  padding: 2rem;
+}
+
+.back-button {
+  padding: 0.5rem 1rem;
+  margin-bottom: 1rem;
+  background: var(--element);
+  border: none;
+  cursor: pointer;
+  border-radius: 5px;
+}
+
+.border-countries button {
+  margin: 0.25rem;
+  padding: 0.5rem 1rem;
+  border: none;
+  background: var(--element);
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Where in the world?</h1>
+    <button id="toggle-theme">Dark Mode</button>
+  </header>
+
+  <main>
+    <div class="controls">
+      <input type="text" id="search" placeholder="Search for a country..." />
+      <select id="region-filter">
+        <option value="">Filter by Region</option>
+        <option value="Africa">Africa</option>
+        <option value="Americas">Americas</option>
+        <option value="Asia">Asia</option>
+        <option value="Europe">Europe</option>
+        <option value="Oceania">Oceania</option>
+      </select>
+    </div>
+
+    <section id="countries" class="country-grid"></section>
+    <section id="detail-view" class="hidden"></section>
+  </main>
+
+  <script>
+    const countriesContainer = document.getElementById('countries');
+const detailView = document.getElementById('detail-view');
+const searchInput = document.getElementById('search');
+const regionFilter = document.getElementById('region-filter');
+const toggleTheme = document.getElementById('toggle-theme');
+
+let countriesData = [];
+
+const fetchCountries = async () => {
+  const res = await fetch('https://restcountries.com/v3.1/all');
+  const data = await res.json();
+  countriesData = data;
+  displayCountries(data);
+};
+
+const displayCountries = (countries) => {
+  detailView.classList.add('hidden');
+  countriesContainer.innerHTML = countries
+    .map(
+      (country) => `
+      <div class="country-card" onclick="showDetails('${country.cca3}')">
+        <img src="${country.flags.svg}" alt="${country.name.common} flag" />
+        <div class="card-body">
+          <h3>${country.name.common}</h3>
+          <p><strong>Population:</strong> ${country.population.toLocaleString()}</p>
+          <p><strong>Region:</strong> ${country.region}</p>
+          <p><strong>Capital:</strong> ${country.capital ? country.capital[0] : 'N/A'}</p>
+        </div>
+      </div>`
+    )
+    .join('');
+};
+
+const showDetails = (code) => {
+  const country = countriesData.find((c) => c.cca3 === code);
+  countriesContainer.innerHTML = '';
+  detailView.classList.remove('hidden');
+
+  detailView.innerHTML = `
+    <button class="back-button" onclick="displayCountries(countriesData)">Back</button>
+    <h2>${country.name.common}</h2>
+    <img src="${country.flags.svg}" alt="${country.name.common} flag" style="max-width: 300px;" />
+    <p><strong>Native Name:</strong> ${Object.values(country.name.nativeName || {})[0]?.common || country.name.common}</p>
+    <p><strong>Population:</strong> ${country.population.toLocaleString()}</p>
+    <p><strong>Region:</strong> ${country.region}</p>
+    <p><strong>Subregion:</strong> ${country.subregion || 'N/A'}</p>
+    <p><strong>Capital:</strong> ${country.capital ? country.capital[0] : 'N/A'}</p>
+    <p><strong>Top Level Domain:</strong> ${country.tld?.join(', ')}</p>
+    <p><strong>Currencies:</strong> ${Object.values(country.currencies || {}).map(cur => cur.name).join(', ')}</p>
+    <p><strong>Languages:</strong> ${Object.values(country.languages || {}).join(', ')}</p>
+    <div class="border-countries">
+      <strong>Border Countries:</strong>
+      ${(country.borders || []).map(code => {
+        const borderCountry = countriesData.find(c => c.cca3 === code);
+        return `<button onclick="showDetails('${code}')">${borderCountry?.name.common || code}</button>`;
+      }).join('') || 'None'}
+    </div>
+  `;
+};
+
+searchInput.addEventListener('input', () => {
+  const value = searchInput.value.toLowerCase();
+  const filtered = countriesData.filter((c) =>
+    c.name.common.toLowerCase().includes(value)
+  );
+  displayCountries(filtered);
+});
+
+regionFilter.addEventListener('change', () => {
+  const region = regionFilter.value;
+  const filtered = region
+    ? countriesData.filter((c) => c.region === region)
+    : countriesData;
+  displayCountries(filtered);
+});
+
+toggleTheme.addEventListener('click', () => {
+  document.body.classList.toggle('dark');
+});
+
+fetchCountries();
+  </script>
+</body>
+</html>
